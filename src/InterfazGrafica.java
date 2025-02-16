@@ -1,13 +1,14 @@
 
-import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import javax.swing.*;
 
 public class InterfazGrafica extends JFrame {
 
     private JTextArea codigoFuente;
     private JButton analizarButton;
+    private JTabbedPane panelResultados;
     private JTextArea resultadoTokens;
     private JTextArea resultadoSimbolos;
     private JTextArea resultadoErrores;
@@ -15,59 +16,87 @@ public class InterfazGrafica extends JFrame {
     public InterfazGrafica() {
         // Configurar la ventana principal
         setTitle("Analizador Léxico");
-        setSize(800, 600);
+        setSize(1000, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new BorderLayout(10, 10));
 
-        // Crear componentes
+        // Panel superior: Área de código fuente
+        JPanel panelCodigo = new JPanel(new BorderLayout());
+        panelCodigo.setBorder(BorderFactory.createTitledBorder("Código Fuente"));
         codigoFuente = new JTextArea();
+        codigoFuente.setFont(new Font("Monospaced", Font.PLAIN, 14));
+        JScrollPane scrollCodigo = new JScrollPane(codigoFuente);
+        scrollCodigo.setPreferredSize(new Dimension(900, 300));
+        panelCodigo.add(scrollCodigo, BorderLayout.CENTER);
+
+        // Botón de análisis
         analizarButton = new JButton("Analizar");
-        resultadoTokens = new JTextArea();
-        resultadoSimbolos = new JTextArea();
-        resultadoErrores = new JTextArea();
+        analizarButton.setFont(new Font("Arial", Font.BOLD, 14));
+        JPanel panelBoton = new JPanel();
+        panelBoton.add(analizarButton);
 
-        // Configurar el layout
-        setLayout(new BorderLayout());
+        // Panel inferior: Resultados con pestañas y barras de desplazamiento
+        panelResultados = new JTabbedPane();
+        resultadoTokens = crearAreaTextoConScroll();
+        resultadoSimbolos = crearAreaTextoConScroll();
+        resultadoErrores = crearAreaTextoConScroll();
 
-        // Panel superior: Área de texto para el código fuente
-        JPanel panelCodigo = new JPanel();
-        panelCodigo.setLayout(new BorderLayout());
-        panelCodigo.add(new JLabel("Código fuente:"), BorderLayout.NORTH);
-        panelCodigo.add(new JScrollPane(codigoFuente), BorderLayout.CENTER);
+        panelResultados.addTab("Tokens", new JScrollPane(resultadoTokens));
+        panelResultados.addTab("Símbolos", new JScrollPane(resultadoSimbolos));
+        panelResultados.addTab("Errores", new JScrollPane(resultadoErrores));
 
-        // Panel central: Botón de análisis
-        JPanel panelBotones = new JPanel();
-        panelBotones.add(analizarButton);
-
-        // Panel inferior: Resultados (tokens, tabla de símbolos, errores)
-        JPanel panelResultados = new JPanel();
-        panelResultados.setLayout(new GridLayout(1, 3));
-        panelResultados.add(new JScrollPane(resultadoTokens));
-        panelResultados.add(new JScrollPane(resultadoSimbolos));
-        panelResultados.add(new JScrollPane(resultadoErrores));
-
-        // Agregar paneles a la ventana principal
+        // Organizar componentes
         add(panelCodigo, BorderLayout.NORTH);
-        add(panelBotones, BorderLayout.CENTER);
+        add(panelBoton, BorderLayout.CENTER);
         add(panelResultados, BorderLayout.SOUTH);
 
-        // Acción del botón "Analizar"
+        // Acción del botón (versión mejorada)
         analizarButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String codigo = codigoFuente.getText();
-                // Llamar al analizador léxico
-                AnalizadorLexico analizador = new AnalizadorLexico();
-                analizador.analizar(codigo);
+                if (codigo.isEmpty()) {
+                    JOptionPane.showMessageDialog(null, "Ingrese un código fuente primero.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
 
-                // Mostrar resultados en las áreas de texto
-                resultadoTokens.setText(analizador.getTokens().toString());
-                resultadoSimbolos.setText(analizador.getTablaSimbolos().toString());
-                resultadoErrores.setText(analizador.getErrores().toString());
+                // Limpiar resultados anteriores
+                resultadoTokens.setText("");
+                resultadoSimbolos.setText("");
+                resultadoErrores.setText("");
+
+                // Ejecutar análisis
+                try {
+                    AnalizadorLexico analizador = new AnalizadorLexico();
+                    analizador.analizar(codigo);
+                    mostrarResultados(analizador);
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(null, "Error durante el análisis: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
     }
 
+    private JTextArea crearAreaTextoConScroll() {
+        JTextArea area = new JTextArea();
+        area.setEditable(false);
+        area.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        return area;
+    }
+
+    private void mostrarResultados(AnalizadorLexico analizador) {
+        resultadoTokens.append("=== TOKENS ===\n");
+        analizador.getTokens().forEach(token -> resultadoTokens.append(token + "\n"));
+
+        resultadoSimbolos.append("=== TABLA DE SÍMBOLOS ===\n");
+        analizador.getTablaSimbolos().forEach(simbolo -> resultadoSimbolos.append(simbolo + "\n"));
+
+        resultadoErrores.append("=== ERRORES ===\n");
+        analizador.getErrores().forEach(error -> resultadoErrores.append(error + "\n"));
+    }
+
     public void mostrar() {
         setVisible(true);
+        setLocationRelativeTo(null); // Centrar ventana
     }
 }
