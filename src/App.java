@@ -7,6 +7,7 @@ public class App {
         // Ejecutar la interfaz gráfica en el hilo de eventos de Swing
         SwingUtilities.invokeLater(() -> {
             InterfazGrafica interfaz = new InterfazGrafica();
+            interfaz.setResizable(false);
             interfaz.mostrar();
         });
     }

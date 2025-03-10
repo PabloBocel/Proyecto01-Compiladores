@@ -3,6 +3,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 
 public class InterfazGrafica extends JFrame {
 
@@ -23,6 +24,7 @@ public class InterfazGrafica extends JFrame {
         // Panel superior: Área de código fuente
         JPanel panelCodigo = new JPanel(new BorderLayout());
         panelCodigo.setBorder(BorderFactory.createTitledBorder("Código Fuente"));
+        panelCodigo.setPreferredSize(new Dimension(1000, 450));
         codigoFuente = new JTextArea();
         codigoFuente.setFont(new Font("Monospaced", Font.PLAIN, 14));
         JScrollPane scrollCodigo = new JScrollPane(codigoFuente);
@@ -30,15 +32,24 @@ public class InterfazGrafica extends JFrame {
         panelCodigo.add(scrollCodigo, BorderLayout.CENTER);
 
         // Botón de análisis
-        analizarButton = new JButton("Analizar");
+        analizarButton = new JButton("Analizar Código");
         analizarButton.setFont(new Font("Arial", Font.BOLD, 14));
         JPanel panelBoton = new JPanel();
-        panelBoton.add(analizarButton);
+        panelBoton.setPreferredSize(new Dimension(200, 400));
+        panelBoton.add(analizarButton, BorderLayout.CENTER);
 
         // Panel inferior: Resultados con pestañas y barras de desplazamiento
         panelResultados = new JTabbedPane();
+        panelResultados.setPreferredSize(new Dimension(750, 400));
+
+        //Crear tabla para almacenar símbolos
+        String[] columnas = {"Identificador", "Tipo", "Ámbito", "Valor"};
+        DefaultTableModel modelo = new DefaultTableModel(columnas, 0);
+
+        JTable tablaSimbolos = new JTable(modelo);
+
         resultadoTokens = crearAreaTextoConScroll();
-        resultadoSimbolos = crearAreaTextoConScroll();
+        JScrollPane resultadoSimbolos = new JScrollPane(tablaSimbolos);
         resultadoErrores = crearAreaTextoConScroll();
 
         panelResultados.addTab("Tokens", new JScrollPane(resultadoTokens));
@@ -47,8 +58,8 @@ public class InterfazGrafica extends JFrame {
 
         // Organizar componentes
         add(panelCodigo, BorderLayout.NORTH);
-        add(panelBoton, BorderLayout.CENTER);
-        add(panelResultados, BorderLayout.SOUTH);
+        add(panelBoton, BorderLayout.EAST);
+        add(panelResultados, BorderLayout.WEST);
 
         // Acción del botón (versión mejorada)
         analizarButton.addActionListener(new ActionListener() {
@@ -62,12 +73,11 @@ public class InterfazGrafica extends JFrame {
 
                 // Limpiar resultados anteriores
                 resultadoTokens.setText("");
-                resultadoSimbolos.setText("");
                 resultadoErrores.setText("");
 
                 // Ejecutar análisis
                 try {
-                    AnalizadorLexico analizador = new AnalizadorLexico();
+                    AnalizadorLexico analizador = new AnalizadorLexico(codigo);
                     analizador.analizar(codigo);
                     mostrarResultados(analizador);
                 } catch (Exception ex) {
@@ -88,8 +98,8 @@ public class InterfazGrafica extends JFrame {
         resultadoTokens.append("=== TOKENS ===\n");
         analizador.getTokens().forEach(token -> resultadoTokens.append(token + "\n"));
 
-        resultadoSimbolos.append("=== TABLA DE SÍMBOLOS ===\n");
-        analizador.getTablaSimbolos().forEach(simbolo -> resultadoSimbolos.append(simbolo + "\n"));
+        //resultadoSimbolos.append("=== TABLA DE SÍMBOLOS ===\n");
+        //analizador.getTablaSimbolos().forEach(simbolo -> resultadoSimbolos.append(simbolo + "\n"));
 
         resultadoErrores.append("=== ERRORES ===\n");
         analizador.getErrores().forEach(error -> resultadoErrores.append(error + "\n"));

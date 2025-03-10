@@ -9,12 +9,15 @@ public class AnalizadorLexico {
     private List<Token> tokens;
     private List<Simbolo> tablaSimbolos;
     private List<ErrorLexico> errores;
+    private List<String> buffer;
+    private String codigoFuente;
     private int lineaActual = 1;
     private int columnaActual = 1;
 
     // Expresiones regulares para los tokens
     private final Pattern patronComentarioLinea = Pattern.compile("//.*");
-    private final Pattern patronComentarioBloque = Pattern.compile("/\\*.*?\\*/", Pattern.DOTALL);
+    private final Pattern patronInicioComentarioBloque = Pattern.compile("/\\*");
+    private final Pattern patronFinalComentarioBloque = Pattern.compile("\\*\\/");
     private final Pattern patronCadena = Pattern.compile("\"[^\"]*\"");
     private final Pattern patronCaracter = Pattern.compile("'[^']'");
     private final Pattern patronNumeroReal = Pattern.compile("-?\\d+\\.\\d+");
@@ -23,15 +26,22 @@ public class AnalizadorLexico {
     private final Pattern patronOperadores = Pattern.compile("[+\\-*/^#=<>!&|]|>=|<=|==|!=|&&|\\|\\|");
     private final Pattern patronSignos = Pattern.compile("[();{},]");
 
-    public AnalizadorLexico() {
-        tokens = new ArrayList<>();
-        tablaSimbolos = new ArrayList<>();
-        errores = new ArrayList<>();
+    public AnalizadorLexico(String codigoFuente) {
+        this.tokens = new ArrayList<>();
+        this.tablaSimbolos = new ArrayList<>();
+        this.errores = new ArrayList<>();
+        this.buffer = new ArrayList<>();
+        this.codigoFuente = codigoFuente;
     }
 
     public void analizar(String codigo) {
         String[] lineas = codigo.split("\\r?\\n");
         for (String linea : lineas) {
+            
+            //Procesar si es inicio de un comentario bloque
+            if(linea.trim().equals("/*") || linea.trim().equals( "*/")){
+                buffer.add(linea.trim());
+            }
             procesarLinea(linea);
             lineaActual++;
             columnaActual = 1;
@@ -41,17 +51,25 @@ public class AnalizadorLexico {
     private void procesarLinea(String linea) {
         String texto = linea.trim();
         while (!texto.isEmpty()) {
+
             // Ignorar comentarios
             Matcher matcherComentarioLinea = patronComentarioLinea.matcher(texto);
             if (matcherComentarioLinea.lookingAt()) {
                 break;
             }
 
-            Matcher matcherComentarioBloque = patronComentarioBloque.matcher(texto);
+            Matcher matcherComentarioBloque = patronInicioComentarioBloque.matcher(texto);
             if (matcherComentarioBloque.lookingAt()) {
                 texto = texto.substring(matcherComentarioBloque.end()).trim();
                 continue;
             }
+
+            Matcher matcherCometarioFinalBloque = patronFinalComentarioBloque.matcher(texto);
+            if(matcherCometarioFinalBloque.lookingAt()){
+                texto = texto.substring(matcherCometarioFinalBloque.end()).trim();
+                continue;
+            }
+            
 
             // Procesar tokens
             boolean encontrado = false;
@@ -120,6 +138,17 @@ public class AnalizadorLexico {
             // Identificadores y palabras reservadas
             Matcher matcherIdentificador = patronIdentificador.matcher(texto);
             if (matcherIdentificador.lookingAt()) {
+
+                if(buffer.contains("/*")){
+
+                    if(!buffer.contains("*/")){
+                        texto = "";
+                        continue;
+                    }else{
+                    buffer.clear();
+                    }
+                }
+
                 String identificador = matcherIdentificador.group().toLowerCase();
                 if (esPalabraReservada(identificador)) {
                     agregarToken("PALABRA_RESERVADA", identificador, lineaActual, columnaActual);
@@ -127,11 +156,12 @@ public class AnalizadorLexico {
                     agregarToken("IDENTIFICADOR", identificador, lineaActual, columnaActual);
                     agregarSimbolo(identificador, "VARIABLE", lineaActual, columnaActual);
                 }
-                texto = texto.substring(identificador.length()).trim();
-                columnaActual += identificador.length();
-                encontrado = true;
-                continue;
-            }
+                    texto = texto.substring(identificador.length()).trim();
+                    columnaActual += identificador.length();
+                    encontrado = true;
+                    continue;
+                }
+            
 
             // Si no se encontró ningún token válido, registrar error
             if (!encontrado) {
